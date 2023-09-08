@@ -36,7 +36,7 @@ def do_heating():
     pass
 
 
-def run_simulation_lp(parameter_values, experiment, initial_soc, project):
+def run_simulation_lp(parameter_values, experiment, initial_soc, project, Rs=1e-3, Ri=90, thermal=True):
     ###########################################################################
     # Simulation information                                                  #
     ###########################################################################
@@ -113,8 +113,6 @@ def run_simulation_lp(parameter_values, experiment, initial_soc, project):
     ###########################################################################
     dim_time_step = 10
     neg_econd, pos_econd = ecm.cc_cond(project, parameter_values)
-    Rs = 1e-2  # series resistance
-    Ri = 90  # initial guess for internal resistance
     V = 3.6  # initial guess for cell voltage
     # I_app = 0.5
     netlist = ecm.network_to_netlist(net, Rs, Ri, V, I_app)
@@ -134,11 +132,16 @@ def run_simulation_lp(parameter_values, experiment, initial_soc, project):
         ],
         period="1 second",
     )
+    if thermal:
+        lp_function = lp.thermal_external
+    else:
+        lp_function = lp.basic_simulation
+
     # Solve the pack
     manager = lp.CasadiManager()
     manager.solve(
         netlist=netlist,
-        sim_func=lp.thermal_external,
+        sim_func=lp_function,
         parameter_values=parameter_values,
         experiment=experiment_init,
         output_variables=output_variables,
@@ -199,7 +202,7 @@ def run_simulation_lp(parameter_values, experiment, initial_soc, project):
     manager = lp.CasadiManager()
     manager.solve(
         netlist=netlist,
-        sim_func=lp.thermal_external,
+        sim_func=lp_function,
         parameter_values=parameter_values,
         experiment=experiment,
         output_variables=output_variables,

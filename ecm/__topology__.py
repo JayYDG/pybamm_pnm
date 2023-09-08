@@ -25,21 +25,21 @@ def plot_topology(net, ax=None):
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
     ax = ecm.plot_resistors(net, throats=net.throats("throat.neg_cc"), color=c1, ax=ax)
     ax = ecm.plot_resistors(net, throats=net.throats("throat.pos_cc"), color=c2, ax=ax)
-    ax = pcoord(net, pores=net.pores("neg_cc"), color=c1, s=25, ax=ax)
-    ax = pcoord(net, pores=net.pores("pos_cc"), color=c2, s=25, ax=ax)
-    ax = pcoord(net, pores=net["pore.neg_tab"], color=c1, s=75, ax=ax)
-    ax = pcoord(net, pores=net["pore.pos_tab"], color=c2, s=75, ax=ax)
+    ax = pcoord(net, pores=net.pores("neg_cc"), fig=fig, color=c1, s=25)
+    ax = pcoord(net, pores=net.pores("pos_cc"), fig=fig, color=c2, s=25)
+    ax = pcoord(net, pores=net["pore.neg_tab"], fig=fig, color=c1, s=75)
+    ax = pcoord(net, pores=net["pore.pos_tab"], fig=fig, color=c2, s=75)
 
     for label in ["inner_boundary", "free_stream"]:
         try:
-            ax = pcoord(net, pores=net.pores(label), color=c3, ax=ax)
-            ax = pconn(net, throats=net.throats(label), color=c3, ax=ax)
+            ax = pcoord(net, pores=net.pores(label), fig=fig, color=c3)
+            ax = pconn(net, throats=net.throats(label), fig=fig, color=c3)
         except KeyError:
             pass
 
     t_sep = net.throats("spm_resistor")
     if len(t_sep) > 0:
-        ax = pconn(net, throats=net.throats("spm_resistor"), color="k", ax=ax)
+        ax = pconn(net, throats=net.throats("spm_resistor"), fig=fig, color="k")
     return ax
 
 
@@ -84,8 +84,8 @@ def make_spiral_net(
         DESCRIPTION.
 
     """
-    Narc = np.int(360 / dtheta)  # number of nodes in a wind/layer
-    Nunit = np.int(Nlayers * Narc)  # total number of unit cells
+    Narc = int(360 / dtheta)  # number of nodes in a wind/layer
+    Nunit = int(Nlayers * Narc)  # total number of unit cells
     N1d = 2
     # 2D assembly
     assembly = np.zeros([Nunit, N1d], dtype=int)
