@@ -53,6 +53,15 @@ def spiral(r, dr, ntheta=36, n=10):
     return (x, y, rad, pos)
 
 
+def spiral2(r, dr, ntheta=36, n=10):
+    theta = np.linspace(0, n * (2 * np.pi), int(n * ntheta) + 1)
+    pos = np.linspace(0, n * ntheta, int(n * ntheta) + 1) % ntheta
+    pos = pos.astype(int)
+    rad = r + np.linspace(0, n * dr, int(n * ntheta) + 1)
+    x = rad * np.cos(theta)
+    y = rad * np.sin(theta)
+    return (x, y, rad, pos)
+
 def make_spiral_net(
     Nlayers, dtheta, spacing, inner_r, pos_tabs, neg_tabs, length_3d, tesla_tabs
 ):
@@ -84,6 +93,11 @@ def make_spiral_net(
         DESCRIPTION.
 
     """
+    if Nlayers % 1 != 0:
+        rest_layer = Nlayers % 1
+        if rest_layer * 360 % dtheta != 0:
+            raise Exception("In this case {} * 360 = {} is not divisible by {} with residue {}".format(Nlayers, Nlayers*360, dtheta, Nlayers*360%dtheta))
+
     Narc = int(360 / dtheta)  # number of nodes in a wind/layer
     Nunit = int(Nlayers * Narc)  # total number of unit cells
     N1d = 2
@@ -108,7 +122,7 @@ def make_spiral_net(
     r_start = net["pore.coords"][net["pore.cell_id"] == 0][:, 1]
     dr = spacing * N1d
     for i in range(N1d):
-        (x, y, rad, pos) = spiral(r_start[i] + inner_r, dr, ntheta=Narc, n=Nlayers)
+        (x, y, rad, pos) = spiral2(r_start[i] + inner_r, dr, ntheta=Narc, n=Nlayers)
         mask = net["pore.coords"][:, 1] == r_start[i]
         coords = net["pore.coords"][mask]
         coords[:, 0] = x[:-1]
@@ -185,7 +199,7 @@ def make_spiral_net(
 
     # Free stream convection boundary nodes
     free_rad = inner_r + (Nlayers + 0.5) * dr
-    (x, y, rad, pos) = spiral(free_rad, dr, ntheta=Narc, n=1)
+    (x, y, rad, pos) = spiral2(free_rad, dr, ntheta=Narc, n=1)
     net_free = op.network.Cubic(shape=[Narc, 1, 1], spacing=spacing)
 
     net_free["throat.trimmers"] = True
@@ -214,7 +228,7 @@ def make_spiral_net(
 
     # Inner boundary nodes
     inner_rad = inner_r - 0.5 * dr
-    (x, y, rad, pos) = spiral(inner_rad, dr, ntheta=Narc, n=1)
+    (x, y, rad, pos) = spiral2(inner_rad, dr, ntheta=Narc, n=1)
     net_inner = op.network.Cubic(shape=[Narc, 1, 1], spacing=spacing)
 
     net_inner["throat.trimmers"] = True
@@ -538,4 +552,24 @@ def network_to_netlist(network, Rs=1e-5, Ri=60, V=3.6, I_app=-5.0):
     }
     # add internal resistors
     netlist = pd.DataFrame(netlist_data)
+    return netlist
+
+
+def network_to_netlist_double(dtheta, network, Rs=1e-5, Ri=60, V=3.6, I_app=-5.0):
+    netlist = network_to_netlist(network, Rs=Rs, Ri=Ri, V=V, I_app=I_app)
+    #Numer of single sided node for inner and outer layer
+    single_side_num = int(360 / dtheta)
+    netlist["single"] = 1
+    for t in network.throats("throat.spm_resistor"):
+        if t in network.throats("throat.spm_resistor")[single_side_num:-single_side_num]:
+            netlist.loc[netlist["desc"] == "Rs{}".format(t), "single"] = 2
+            netlist.loc[netlist["desc"] == "Ri{}".format(t), "single"] = 2
+    return netlist
+
+def network_update_double_R(netlist):
+    """
+    For the double sided cell model, we divided their resistance by 2, 
+    to mimic the resistance of the micro two cells parallel model
+    """
+    netlist.loc[netlist["single"] == 2, "value"] = netlist.loc[netlist["single"] == 2, "value"]/2
     return netlist
