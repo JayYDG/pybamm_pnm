@@ -179,7 +179,8 @@ def run_simulation_lp_double(parameter_values, experiment, initial_soc, project,
             # Q_ohm_cc /= net["throat.volume"][res_Ts]
             # key = "Volume-averaged Ohmic heating CC [W.m-3]"
             # vh[key][outer_step, :] = Q_ohm_cc[sorted_res_Ts]
-            Q[res_Ts] += Q_tot
+            # double the heat for double layer
+            Q[res_Ts] += Q_tot * netlist[(netlist["desc"].str.find("Rs") > -1)]["single"].values
             ecm.apply_heat_source_lp(project, Q)
             # Calculate Global Temperature
             ecm.run_step_transient(project, dim_time_step, T0, cp, rho, thermal_third)
@@ -244,7 +245,7 @@ def run_simulation_lp_double(parameter_values, experiment, initial_soc, project,
             # Q_ohm_cc /= net["throat.volume"][res_Ts]
             # key = "Volume-averaged Ohmic heating CC [W.m-3]"
             # vh[key][outer_step, :] = Q_ohm_cc[sorted_res_Ts]
-            Q[res_Ts] += Q_tot
+            Q[res_Ts] += Q_tot * netlist[(netlist["desc"].str.find("Rs") > -1)]["single"].values
             ecm.apply_heat_source_lp(project, Q)
             # Calculate Global Temperature
             ecm.run_step_transient(project, dim_time_step, T0, cp, rho, thermal_third)
